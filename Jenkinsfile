@@ -25,24 +25,24 @@ pipeline {
             }
         }
 
-        stage('Clone Backend Repo') {
+        stage('Build Frontend') {
             steps {
-                dir('backend_src') {
-                    git branch: 'main',
-                        url: 'https://github.com/Shresth2725/DevPulse.git'
+                dir('frontend') {
+                    sh '''
+                      node -v || true
+                      npm -v || true
+                      npm install
+                      npm run build
+                    '''
                 }
             }
         }
 
-        stage('Verify Structure') {
+        stage('Verify Frontend Build') {
             steps {
                 sh '''
-                  echo "==== Workspace Structure ===="
-                  ls -la
-                  echo "==== Frontend ===="
-                  ls -la frontend
-                  echo "==== Backend ===="
-                  ls -la backend_src
+                  echo "==== dist contents ===="
+                  ls -la frontend/dist
                 '''
             }
         }
