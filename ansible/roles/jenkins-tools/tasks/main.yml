@@ -8,14 +8,26 @@
       - git
       - curl
       - unzip
+      - ca-certificates
     state: present
 
-- name: Install Node.js 18
+- name: Add NodeSource Node.js 20 repo
   shell: |
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-    apt install -y nodejs
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
   args:
-    creates: /usr/bin/node
+    creates: /etc/apt/sources.list.d/nodesource.list
+
+- name: Install Node.js 20
+  apt:
+    name: nodejs
+    state: present
+
+- name: Verify Node.js version
+  command: node -v
+  register: node_version
+
+- debug:
+    msg: "Installed Node version: {{ node_version.stdout }}"
 
 - name: Install Ansible
   apt:
