@@ -1,0 +1,64 @@
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+- name: Install Java and utilities
+  apt:
+    name:
+      - openjdk-17-jdk
+      - curl
+    state: present
+
+- name: Create jenkins user
+  user:
+    name: jenkins
+    shell: /bin/bash
+    create_home: yes
+
+- name: Create Jenkins directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: jenkins
+    group: jenkins
+    mode: "0755"
+  loop:
+    - /opt/jenkins
+    - /var/lib/jenkins
+    - /var/log/jenkins
+
+- name: Download Jenkins WAR
+  get_url:
+    url: https://get.jenkins.io/war-stable/latest/jenkins.war
+    dest: /opt/jenkins/jenkins.war
+    owner: jenkins
+    group: jenkins
+    mode: "0644"
+
+- name: Create Jenkins systemd service
+  copy:
+    dest: /etc/systemd/system/jenkins.service
+    content: |
+      [Unit]
+      Description=Jenkins
+      After=network.target
+
+      [Service]
+      User=jenkins
+      Group=jenkins
+      ExecStart=/usr/bin/java -jar /opt/jenkins/jenkins.war
+      Restart=always
+      SuccessExitStatus=143
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: Enable and start Jenkins
+  systemd:
+    name: jenkins
+    enabled: yes
+    state: started

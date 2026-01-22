@@ -1,0 +1,47 @@
+# =========================
+# Jenkins / CI artifacts
+# =========================
+frontend/
+backend_src/
+
+# =========================
+# Docker injected build artifacts
+# =========================
+docker/nginx/dist/
+docker/backend/DevPulse/
+
+# =========================
+# Node / JS
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =========================
+# Environment files
+# =========================
+.env
+.env.*
+
+# =========================
+# Terraform
+# =========================
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+terraform.tfvars
+
+# =========================
+# Ansible
+# =========================
+*.retry
+ansible.log
+
+# =========================
+# OS / Editor
+# =========================
+.DS_Store
+.vscode/
+.idea/

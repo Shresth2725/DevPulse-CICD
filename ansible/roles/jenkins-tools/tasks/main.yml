@@ -1,0 +1,29 @@
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+- name: Install basic packages
+  apt:
+    name:
+      - git
+      - curl
+      - unzip
+    state: present
+
+- name: Install Node.js 18
+  shell: |
+    curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+    apt install -y nodejs
+  args:
+    creates: /usr/bin/node
+
+- name: Install Ansible
+  apt:
+    name: ansible
+    state: present
+
+- name: Allow Jenkins passwordless sudo
+  copy:
+    dest: /etc/sudoers.d/jenkins
+    content: "jenkins ALL=(ALL) NOPASSWD:ALL\n"
+    mode: "0440"

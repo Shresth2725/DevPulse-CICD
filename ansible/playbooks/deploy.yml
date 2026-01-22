@@ -1,0 +1,28 @@
+---
+- name: Deploy DevPulse
+  hosts: devpulse
+  become: yes
+
+  tasks:
+    - name: Copy docker-compose file
+      copy:
+        src: ../../docker-compose.yml
+        dest: /home/ubuntu/docker-compose.yml
+
+    - name: Copy env file
+      copy:
+        src: ../../.env
+        dest: /home/ubuntu/.env
+        mode: "0600"
+
+    - name: Sync docker folder
+      synchronize:
+        src: ../../docker/
+        dest: /home/ubuntu/docker/
+        recursive: yes
+        delete: yes
+
+    - name: Build and start containers
+      shell: docker compose up -d --build
+      args:
+        chdir: /home/ubuntu

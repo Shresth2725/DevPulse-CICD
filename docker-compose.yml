@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./docker/backend
+    container_name: devpulse-backend
+    restart: always
+    ports:
+      - "7777:7777"
+    env_file:
+      - .env
+
+  frontend:
+    build:
+      context: ./docker/nginx
+    container_name: devpulse-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
