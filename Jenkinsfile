@@ -29,14 +29,16 @@ pipeline {
             steps {
                 dir('frontend') {
                     sh '''
-                      node -v || true
-                      npm -v || true
-                      npm install
-                      npm run build
+                    docker run --rm \
+                        -v "$PWD":/app \
+                        -w /app \
+                        node:20-alpine \
+                        sh -c "npm install && npm run build"
                     '''
                 }
             }
         }
+
 
         stage('Verify Frontend Build') {
             steps {
