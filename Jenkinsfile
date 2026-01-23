@@ -48,5 +48,17 @@ pipeline {
                 '''
             }
         }
+
+        stage('Copy Frontend Dist to Docker Context') {
+            steps {
+                sh '''
+                echo "Injecting frontend dist into docker/nginx..."
+                rm -rf docker/nginx/dist
+                mkdir -p docker/nginx/dist
+                cp -r frontend/dist/* docker/nginx/dist/
+                '''
+            }
+        }
+
     }
 }
