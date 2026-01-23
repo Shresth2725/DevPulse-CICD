@@ -92,25 +92,25 @@ pipeline {
                     string(credentialsId: 'API_KEY', variable: 'API_KEY'),
                     string(credentialsId: 'API_SECRET', variable: 'API_SECRET')
                 ]) {
-        sh '''
-        echo Creating .env file
+                    sh '''
+                    echo "Creating .env file"
+                    rm -f .env
 
-        cat > .env <<'EOF'
-        DB_CONNECTION_STRING=${DB_CONNECTION_STRING}
-        JWT_SECRET_KEY=${JWT_SECRET_KEY}
-        PORT=${PORT}
-        RAZORPAY_SECRET_KEY=${RAZORPAY_SECRET_KEY}
-        RAZORPAY_WEBHOOK_SECRET=${RAZORPAY_WEBHOOK_SECRET}
-        CLOUD_NAME=${CLOUD_NAME}
-        API_KEY=${API_KEY}
-        API_SECRET=${API_SECRET}
-        EOF
+                    echo "DB_CONNECTION_STRING=$DB_CONNECTION_STRING" >> .env
+                    echo "JWT_SECRET_KEY=$JWT_SECRET_KEY" >> .env
+                    echo "PORT=$PORT" >> .env
+                    echo "RAZORPAY_SECRET_KEY=$RAZORPAY_SECRET_KEY" >> .env
+                    echo "RAZORPAY_WEBHOOK_SECRET=$RAZORPAY_WEBHOOK_SECRET" >> .env
+                    echo "CLOUD_NAME=$CLOUD_NAME" >> .env
+                    echo "API_KEY=$API_KEY" >> .env
+                    echo "API_SECRET=$API_SECRET" >> .env
 
-        echo .env file created successfully
-        '''
+                    echo ".env file created"
+                    '''
                 }
             }
         }
+
 
 
 
