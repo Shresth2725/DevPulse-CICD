@@ -80,6 +80,16 @@ pipeline {
             }
         }
 
+        stage('Build and Deploy Containers') {
+            steps {
+                sh '''
+                echo "Building and deploying containers..."
+                docker compose down
+                docker compose build
+                docker compose up -d
+                '''
+            }
+        }
 
     }
 }
