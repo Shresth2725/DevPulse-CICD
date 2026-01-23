@@ -112,20 +112,38 @@ pipeline {
         }
 
 
+        stage('Docker Login') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKERHUB_USER',
+                    passwordVariable: 'DOCKERHUB_TOKEN'
+                )]) {
+                    sh '''
+                    echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USER" --password-stdin
+                    '''
+                }
+            }
+        }
 
-
-
-
-        stage('Build and Deploy Containers') {
+        stage('Build Docker Images') {
             steps {
                 sh '''
-                echo "Building and deploying containers..."
-                docker compose down
-                docker compose build
-                docker compose up -d
+                docker build -t shresth2725/devpulse-backend:latest docker/backend
+                docker build -t shresth2725/devpulse-frontend:latest docker/nginx
                 '''
             }
         }
+
+        stage('Push Docker Images') {
+            steps {
+                sh '''
+                docker push shresth2725/devpulse-backend:latest
+                docker push shresth2725/devpulse-frontend:latest
+                '''
+            }
+        }
+
 
     }
 }
