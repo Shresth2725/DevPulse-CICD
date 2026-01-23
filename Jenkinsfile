@@ -133,15 +133,23 @@ pipeline {
             }
         }
 
-        stage('Bootstrap Hosting EC2 (one-time safe)') {
-            steps {
-                sshagent(credentials: ['hosting-ssh']) {
-                    sh '''
-                    ssh -o StrictHostKeyChecking=no ubuntu@13.218.185.235 << 'EOF'
-                    mkdir -p ~/devpulse
-                    cd ~/devpulse
+        stage('Bootstrap Hosting EC2') {
+    steps {
+        withCredentials([
+            sshUserPrivateKey(
+                credentialsId: 'hosting-ssh',
+                keyFileVariable: 'SSH_KEY',
+                usernameVariable: 'SSH_USER'
+            )
+        ]) {
+            sh '''
+            chmod 600 "$SSH_KEY"
 
-                    cat > docker-compose.yml << 'EOC'
+            ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no $SSH_USER@13.218.185.235 << 'EOF'
+            mkdir -p ~/devpulse
+            cd ~/devpulse
+
+            cat > docker-compose.yml << 'EOC'
 services:
   backend:
     image: shresth2725/devpulse-backend:latest
@@ -159,11 +167,12 @@ services:
       - "80:80"
     restart: always
 EOC
-                    EOF
-                    '''
-                }
-            }
+            EOF
+            '''
         }
+    }
+}
+
 
         stage('Copy .env to Hosting EC2') {
             steps {
