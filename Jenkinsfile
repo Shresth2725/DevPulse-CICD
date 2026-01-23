@@ -92,10 +92,10 @@ pipeline {
                     string(credentialsId: 'API_KEY', variable: 'API_KEY'),
                     string(credentialsId: 'API_SECRET', variable: 'API_SECRET')
                 ]) {
-                    sh '''
-                    echo "Creating .env file"
+        sh '''
+        echo Creating .env file
 
-                    cat > .env <<EOF
+        cat > .env <<'EOF'
         DB_CONNECTION_STRING=${DB_CONNECTION_STRING}
         JWT_SECRET_KEY=${JWT_SECRET_KEY}
         PORT=${PORT}
@@ -106,11 +106,13 @@ pipeline {
         API_SECRET=${API_SECRET}
         EOF
 
-                    echo ".env file created successfully"
-                    '''
+        echo .env file created successfully
+        '''
                 }
             }
         }
+
+
 
 
 
