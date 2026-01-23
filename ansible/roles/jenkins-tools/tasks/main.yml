@@ -82,3 +82,26 @@
     name: docker
     enabled: yes
     state: started
+
+- name: Ensure docker group exists
+  group:
+    name: docker
+    state: present
+
+- name: Add jenkins user to docker group
+  user:
+    name: jenkins
+    groups: docker
+    append: yes
+
+- name: Restart Docker service
+  systemd:
+    name: docker
+    state: restarted
+    enabled: yes
+
+- name: Restart Jenkins service
+  systemd:
+    name: jenkins
+    state: restarted
+    enabled: yes
