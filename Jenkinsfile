@@ -29,22 +29,18 @@ pipeline {
             steps {
                 dir('frontend') {
                     sh '''
-                    docker run --rm \
-                        node -v || true
-                        npm -v || true
-                        npm install
-                        npm run build
+                    npm install
+                    npm run build
                     '''
                 }
             }
         }
 
-
         stage('Verify Frontend Build') {
             steps {
                 sh '''
-                  echo "==== dist contents ===="
-                  ls -la frontend/dist
+                echo "==== dist contents ===="
+                ls -la frontend/dist
                 '''
             }
         }
@@ -52,7 +48,6 @@ pipeline {
         stage('Copy Frontend Dist to Docker Context') {
             steps {
                 sh '''
-                echo "Injecting frontend dist into docker/nginx..."
                 rm -rf docker/nginx/dist
                 mkdir -p docker/nginx/dist
                 cp -r frontend/dist/* docker/nginx/dist/
@@ -72,7 +67,6 @@ pipeline {
         stage('Copy Backend Code to Docker Context') {
             steps {
                 sh '''
-                echo "Injecting backend code into docker/backend/DevPulse..."
                 rm -rf docker/backend/DevPulse
                 mkdir -p docker/backend/DevPulse
                 cp -r backend_src/* docker/backend/DevPulse/
@@ -80,7 +74,7 @@ pipeline {
             }
         }
 
-        stage('Create .env file') {
+        stage('Create .env file (Jenkins only)') {
             steps {
                 withCredentials([
                     string(credentialsId: 'DB_CONNECTION_STRING', variable: 'DB_CONNECTION_STRING'),
@@ -93,9 +87,7 @@ pipeline {
                     string(credentialsId: 'API_SECRET', variable: 'API_SECRET')
                 ]) {
                     sh '''
-                    echo "Creating .env file"
                     rm -f .env
-
                     echo "DB_CONNECTION_STRING=$DB_CONNECTION_STRING" >> .env
                     echo "JWT_SECRET_KEY=$JWT_SECRET_KEY" >> .env
                     echo "PORT=$PORT" >> .env
@@ -104,13 +96,10 @@ pipeline {
                     echo "CLOUD_NAME=$CLOUD_NAME" >> .env
                     echo "API_KEY=$API_KEY" >> .env
                     echo "API_SECRET=$API_SECRET" >> .env
-
-                    echo ".env file created"
                     '''
                 }
             }
         }
-
 
         stage('Docker Login') {
             steps {
@@ -144,6 +133,47 @@ pipeline {
             }
         }
 
+        stage('Bootstrap Hosting EC2 (one-time safe)') {
+            steps {
+                sshagent(credentials: ['hosting-ssh']) {
+                    sh '''
+                    ssh -o StrictHostKeyChecking=no ubuntu@13.218.185.235 << 'EOF'
+                    mkdir -p ~/devpulse
+                    cd ~/devpulse
+
+                    cat > docker-compose.yml << 'EOC'
+services:
+  backend:
+    image: shresth2725/devpulse-backend:latest
+    container_name: devpulse-backend
+    env_file:
+      - .env
+    ports:
+      - "7777:7777"
+    restart: always
+
+  frontend:
+    image: shresth2725/devpulse-frontend:latest
+    container_name: devpulse-frontend
+    ports:
+      - "80:80"
+    restart: always
+EOC
+                    EOF
+                    '''
+                }
+            }
+        }
+
+        stage('Copy .env to Hosting EC2') {
+            steps {
+                sshagent(credentials: ['hosting-ssh']) {
+                    sh '''
+                    scp -o StrictHostKeyChecking=no .env ubuntu@13.218.185.235:/home/ubuntu/devpulse/.env
+                    '''
+                }
+            }
+        }
 
     }
 }
