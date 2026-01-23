@@ -95,7 +95,7 @@ pipeline {
                     sh '''
                     echo "Creating .env file"
 
-                    cat <<EOF > .env
+                    cat > .env <<EOF
         DB_CONNECTION_STRING=${DB_CONNECTION_STRING}
         JWT_SECRET_KEY=${JWT_SECRET_KEY}
         PORT=${PORT}
@@ -111,6 +111,7 @@ pipeline {
                 }
             }
         }
+
 
 
         stage('Build and Deploy Containers') {
