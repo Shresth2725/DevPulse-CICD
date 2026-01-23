@@ -80,6 +80,39 @@ pipeline {
             }
         }
 
+        stage('Create .env file') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'DB_CONNECTION_STRING', variable: 'DB_CONNECTION_STRING'),
+                    string(credentialsId: 'JWT_SECRET_KEY', variable: 'JWT_SECRET_KEY'),
+                    string(credentialsId: 'PORT', variable: 'PORT'),
+                    string(credentialsId: 'RAZORPAY_SECRET_KEY', variable: 'RAZORPAY_SECRET_KEY'),
+                    string(credentialsId: 'RAZORPAY_WEBHOOK_SECRET', variable: 'RAZORPAY_WEBHOOK_SECRET'),
+                    string(credentialsId: 'CLOUD_NAME', variable: 'CLOUD_NAME'),
+                    string(credentialsId: 'API_KEY', variable: 'API_KEY'),
+                    string(credentialsId: 'API_SECRET', variable: 'API_SECRET')
+                ]) {
+                    sh '''
+                    echo "Creating .env file"
+
+                    cat <<EOF > .env
+        DB_CONNECTION_STRING=${DB_CONNECTION_STRING}
+        JWT_SECRET_KEY=${JWT_SECRET_KEY}
+        PORT=${PORT}
+        RAZORPAY_SECRET_KEY=${RAZORPAY_SECRET_KEY}
+        RAZORPAY_WEBHOOK_SECRET=${RAZORPAY_WEBHOOK_SECRET}
+        CLOUD_NAME=${CLOUD_NAME}
+        API_KEY=${API_KEY}
+        API_SECRET=${API_SECRET}
+        EOF
+
+                    echo ".env file created successfully"
+                    '''
+                }
+            }
+        }
+
+
         stage('Build and Deploy Containers') {
             steps {
                 sh '''
