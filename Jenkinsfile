@@ -133,22 +133,18 @@ pipeline {
             }
         }
 
-        stage('Bootstrap Hosting EC2') {
+        stage('Deploy to Hosting EC2') {
     steps {
-        withCredentials([
-            sshUserPrivateKey(
-                credentialsId: 'hosting-ssh',
-                keyFileVariable: 'SSH_KEY',
-                usernameVariable: 'SSH_USER'
-            )
-        ]) {
+        sshagent(credentials: ['jenkins-cd-key']) {
             sh '''
-            chmod 600 "$SSH_KEY"
+            ssh -o StrictHostKeyChecking=no ubuntu@13.218.185.235 << 'EOF'
+            set -e
 
-            ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no $SSH_USER@13.218.185.235 << 'EOF'
+            echo "Preparing deployment directory..."
             mkdir -p ~/devpulse
             cd ~/devpulse
 
+            echo "Creating docker-compose.yml..."
             cat > docker-compose.yml << 'EOC'
 services:
   backend:
@@ -167,11 +163,32 @@ services:
       - "80:80"
     restart: always
 EOC
+
+            echo "Creating .env..."
+            cat > .env << 'ENV'
+DB_CONNECTION_STRING=${DB_CONNECTION_STRING}
+JWT_SECRET_KEY=${JWT_SECRET_KEY}
+PORT=7777
+RAZORPAY_SECRET_KEY=${RAZORPAY_SECRET_KEY}
+RAZORPAY_WEBHOOK_SECRET=${RAZORPAY_WEBHOOK_SECRET}
+CLOUD_NAME=${CLOUD_NAME}
+API_KEY=${API_KEY}
+API_SECRET=${API_SECRET}
+ENV
+
+            echo "Pulling latest images..."
+            docker compose pull
+
+            echo "Restarting services..."
+            docker compose up -d
+
+            echo "Deployment complete"
             EOF
             '''
         }
     }
 }
+
 
 
         stage('Copy .env to Hosting EC2') {
