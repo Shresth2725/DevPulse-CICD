@@ -35,9 +35,9 @@ pipeline {
             steps {
                 dir('frontend') {
                     sh '''
-                    npm install
-                    npm run build
-                    '''
+npm install
+npm run build
+'''
                 }
             }
         }
@@ -45,10 +45,10 @@ pipeline {
         stage('Copy Frontend Dist to Docker Context') {
             steps {
                 sh '''
-                rm -rf docker/nginx/dist
-                mkdir -p docker/nginx/dist
-                cp -r frontend/dist/* docker/nginx/dist/
-                '''
+rm -rf docker/nginx/dist
+mkdir -p docker/nginx/dist
+cp -r frontend/dist/* docker/nginx/dist/
+'''
             }
         }
 
@@ -64,10 +64,10 @@ pipeline {
         stage('Copy Backend Code to Docker Context') {
             steps {
                 sh '''
-                rm -rf docker/backend/DevPulse
-                mkdir -p docker/backend/DevPulse
-                cp -r backend_src/* docker/backend/DevPulse/
-                '''
+rm -rf docker/backend/DevPulse
+mkdir -p docker/backend/DevPulse
+cp -r backend_src/* docker/backend/DevPulse/
+'''
             }
         }
 
@@ -79,8 +79,8 @@ pipeline {
                     passwordVariable: 'DOCKERHUB_TOKEN'
                 )]) {
                     sh '''
-                    echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USER" --password-stdin
-                    '''
+echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USER" --password-stdin
+'''
                 }
             }
         }
@@ -88,18 +88,18 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 sh '''
-                docker build -t $BACKEND_IMAGE docker/backend
-                docker build -t $FRONTEND_IMAGE docker/nginx
-                '''
+docker build -t $BACKEND_IMAGE docker/backend
+docker build -t $FRONTEND_IMAGE docker/nginx
+'''
             }
         }
 
         stage('Push Docker Images') {
             steps {
                 sh '''
-                docker push $BACKEND_IMAGE
-                docker push $FRONTEND_IMAGE
-                '''
+docker push $BACKEND_IMAGE
+docker push $FRONTEND_IMAGE
+'''
             }
         }
 
@@ -119,17 +119,17 @@ pipeline {
                     string(credentialsId: 'API_KEY', variable: 'API_KEY'),
                     string(credentialsId: 'API_SECRET', variable: 'API_SECRET')
                 ]) {
-                    sh """
-                    ssh -i \$SSH_KEY -o StrictHostKeyChecking=no \$SSH_USER@${HOST_IP} << EOF
-                    set -e
+                    sh '''
+ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$SSH_USER@98.92.171.29" <<EOF
+set -e
 
-                    mkdir -p ~/devpulse
-                    cd ~/devpulse
+mkdir -p ~/devpulse
+cd ~/devpulse
 
-                    cat > docker-compose.yml << EOC
+cat > docker-compose.yml <<EOC
 services:
   backend:
-    image: ${BACKEND_IMAGE}
+    image: shresth2725/devpulse-backend:latest
     container_name: devpulse-backend
     env_file:
       - .env
@@ -138,28 +138,28 @@ services:
     restart: always
 
   frontend:
-    image: ${FRONTEND_IMAGE}
+    image: shresth2725/devpulse-frontend:latest
     container_name: devpulse-frontend
     ports:
       - "80:80"
     restart: always
 EOC
 
-                    cat > .env << ENV
-DB_CONNECTION_STRING=${DB_CONNECTION_STRING}
-JWT_SECRET_KEY=${JWT_SECRET_KEY}
+cat > .env <<ENV
+DB_CONNECTION_STRING=$DB_CONNECTION_STRING
+JWT_SECRET_KEY=$JWT_SECRET_KEY
 PORT=7777
-RAZORPAY_SECRET_KEY=${RAZORPAY_SECRET_KEY}
-RAZORPAY_WEBHOOK_SECRET=${RAZORPAY_WEBHOOK_SECRET}
-CLOUD_NAME=${CLOUD_NAME}
-API_KEY=${API_KEY}
-API_SECRET=${API_SECRET}
+RAZORPAY_SECRET_KEY=$RAZORPAY_SECRET_KEY
+RAZORPAY_WEBHOOK_SECRET=$RAZORPAY_WEBHOOK_SECRET
+CLOUD_NAME=$CLOUD_NAME
+API_KEY=$API_KEY
+API_SECRET=$API_SECRET
 ENV
 
-                    docker compose pull
-                    docker compose up -d --remove-orphans
-                    EOF
-                    """
+docker compose pull
+docker compose up -d --remove-orphans
+EOF
+'''
                 }
             }
         }
