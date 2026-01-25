@@ -106,6 +106,11 @@ pipeline {
         stage('Deploy to Hosting EC2') {
             steps {
                 withCredentials([
+                    sshUserPrivateKey(
+                        credentialsId: 'jenkins-cd-key',
+                        keyFileVariable: 'SSH_KEY',
+                        usernameVariable: 'SSH_USER'
+                    ),
                     string(credentialsId: 'DB_CONNECTION_STRING', variable: 'DB_CONNECTION_STRING'),
                     string(credentialsId: 'JWT_SECRET_KEY', variable: 'JWT_SECRET_KEY'),
                     string(credentialsId: 'RAZORPAY_SECRET_KEY', variable: 'RAZORPAY_SECRET_KEY'),
@@ -114,15 +119,14 @@ pipeline {
                     string(credentialsId: 'API_KEY', variable: 'API_KEY'),
                     string(credentialsId: 'API_SECRET', variable: 'API_SECRET')
                 ]) {
-                    sshagent(['jenkins-cd-key']) {
-                        sh """
-                        ssh ubuntu@${HOST_IP} << EOF
-                        set -e
+                    sh """
+                    ssh -i \$SSH_KEY -o StrictHostKeyChecking=no \$SSH_USER@${HOST_IP} << EOF
+                    set -e
 
-                        mkdir -p ~/devpulse
-                        cd ~/devpulse
+                    mkdir -p ~/devpulse
+                    cd ~/devpulse
 
-                        cat > docker-compose.yml << EOC
+                    cat > docker-compose.yml << EOC
 services:
   backend:
     image: ${BACKEND_IMAGE}
@@ -141,7 +145,7 @@ services:
     restart: always
 EOC
 
-                        cat > .env << ENV
+                    cat > .env << ENV
 DB_CONNECTION_STRING=${DB_CONNECTION_STRING}
 JWT_SECRET_KEY=${JWT_SECRET_KEY}
 PORT=7777
@@ -152,11 +156,10 @@ API_KEY=${API_KEY}
 API_SECRET=${API_SECRET}
 ENV
 
-                        docker compose pull
-                        docker compose up -d --remove-orphans
-                        EOF
-                        """
-                    }
+                    docker compose pull
+                    docker compose up -d --remove-orphans
+                    EOF
+                    """
                 }
             }
         }
