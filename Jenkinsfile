@@ -1,6 +1,12 @@
 pipeline {
     agent any
 
+    environment {
+        HOST_IP = "98.92.171.29"
+        FRONTEND_IMAGE = "shresth2725/devpulse-frontend:latest"
+        BACKEND_IMAGE  = "shresth2725/devpulse-backend:latest"
+    }
+
     stages {
 
         stage('Clean Workspace') {
@@ -36,15 +42,6 @@ pipeline {
             }
         }
 
-        stage('Verify Frontend Build') {
-            steps {
-                sh '''
-                echo "==== dist contents ===="
-                ls -la frontend/dist
-                '''
-            }
-        }
-
         stage('Copy Frontend Dist to Docker Context') {
             steps {
                 sh '''
@@ -74,33 +71,6 @@ pipeline {
             }
         }
 
-        stage('Create .env file (Jenkins only)') {
-            steps {
-                withCredentials([
-                    string(credentialsId: 'DB_CONNECTION_STRING', variable: 'DB_CONNECTION_STRING'),
-                    string(credentialsId: 'JWT_SECRET_KEY', variable: 'JWT_SECRET_KEY'),
-                    string(credentialsId: 'PORT', variable: 'PORT'),
-                    string(credentialsId: 'RAZORPAY_SECRET_KEY', variable: 'RAZORPAY_SECRET_KEY'),
-                    string(credentialsId: 'RAZORPAY_WEBHOOK_SECRET', variable: 'RAZORPAY_WEBHOOK_SECRET'),
-                    string(credentialsId: 'CLOUD_NAME', variable: 'CLOUD_NAME'),
-                    string(credentialsId: 'API_KEY', variable: 'API_KEY'),
-                    string(credentialsId: 'API_SECRET', variable: 'API_SECRET')
-                ]) {
-                    sh '''
-                    rm -f .env
-                    echo "DB_CONNECTION_STRING=$DB_CONNECTION_STRING" >> .env
-                    echo "JWT_SECRET_KEY=$JWT_SECRET_KEY" >> .env
-                    echo "PORT=$PORT" >> .env
-                    echo "RAZORPAY_SECRET_KEY=$RAZORPAY_SECRET_KEY" >> .env
-                    echo "RAZORPAY_WEBHOOK_SECRET=$RAZORPAY_WEBHOOK_SECRET" >> .env
-                    echo "CLOUD_NAME=$CLOUD_NAME" >> .env
-                    echo "API_KEY=$API_KEY" >> .env
-                    echo "API_SECRET=$API_SECRET" >> .env
-                    '''
-                }
-            }
-        }
-
         stage('Docker Login') {
             steps {
                 withCredentials([usernamePassword(
@@ -118,8 +88,8 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 sh '''
-                docker build -t shresth2725/devpulse-backend:latest docker/backend
-                docker build -t shresth2725/devpulse-frontend:latest docker/nginx
+                docker build -t $BACKEND_IMAGE docker/backend
+                docker build -t $FRONTEND_IMAGE docker/nginx
                 '''
             }
         }
@@ -127,28 +97,35 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 sh '''
-                docker push shresth2725/devpulse-backend:latest
-                docker push shresth2725/devpulse-frontend:latest
+                docker push $BACKEND_IMAGE
+                docker push $FRONTEND_IMAGE
                 '''
             }
         }
 
         stage('Deploy to Hosting EC2') {
-    steps {
-        sshagent(credentials: ['jenkins-cd-key']) {
-            sh '''
-            ssh -o StrictHostKeyChecking=no ubuntu@98.92.171.29 << 'EOF'
-            set -e
+            steps {
+                withCredentials([
+                    string(credentialsId: 'DB_CONNECTION_STRING', variable: 'DB_CONNECTION_STRING'),
+                    string(credentialsId: 'JWT_SECRET_KEY', variable: 'JWT_SECRET_KEY'),
+                    string(credentialsId: 'RAZORPAY_SECRET_KEY', variable: 'RAZORPAY_SECRET_KEY'),
+                    string(credentialsId: 'RAZORPAY_WEBHOOK_SECRET', variable: 'RAZORPAY_WEBHOOK_SECRET'),
+                    string(credentialsId: 'CLOUD_NAME', variable: 'CLOUD_NAME'),
+                    string(credentialsId: 'API_KEY', variable: 'API_KEY'),
+                    string(credentialsId: 'API_SECRET', variable: 'API_SECRET')
+                ]) {
+                    sshagent(['jenkins-cd-key']) {
+                        sh """
+                        ssh ubuntu@${HOST_IP} << EOF
+                        set -e
 
-            echo "Preparing deployment directory..."
-            mkdir -p ~/devpulse
-            cd ~/devpulse
+                        mkdir -p ~/devpulse
+                        cd ~/devpulse
 
-            echo "Creating docker-compose.yml..."
-            cat > docker-compose.yml << 'EOC'
+                        cat > docker-compose.yml << EOC
 services:
   backend:
-    image: shresth2725/devpulse-backend:latest
+    image: ${BACKEND_IMAGE}
     container_name: devpulse-backend
     env_file:
       - .env
@@ -157,15 +134,14 @@ services:
     restart: always
 
   frontend:
-    image: shresth2725/devpulse-frontend:latest
+    image: ${FRONTEND_IMAGE}
     container_name: devpulse-frontend
     ports:
       - "80:80"
     restart: always
 EOC
 
-            echo "Creating .env..."
-            cat > .env << 'ENV'
+                        cat > .env << ENV
 DB_CONNECTION_STRING=${DB_CONNECTION_STRING}
 JWT_SECRET_KEY=${JWT_SECRET_KEY}
 PORT=7777
@@ -176,30 +152,13 @@ API_KEY=${API_KEY}
 API_SECRET=${API_SECRET}
 ENV
 
-            echo "Pulling latest images..."
-            docker compose pull
-
-            echo "Restarting services..."
-            docker compose up -d
-
-            echo "Deployment complete"
-            EOF
-            '''
-        }
-    }
-}
-
-
-
-        stage('Copy .env to Hosting EC2') {
-            steps {
-                sshagent(credentials: ['hosting-ssh']) {
-                    sh '''
-                    scp -o StrictHostKeyChecking=no .env ubuntu@13.218.185.235:/home/ubuntu/devpulse/.env
-                    '''
+                        docker compose pull
+                        docker compose up -d --remove-orphans
+                        EOF
+                        """
+                    }
                 }
             }
         }
-
     }
 }
