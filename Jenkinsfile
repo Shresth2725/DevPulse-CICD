@@ -137,7 +137,7 @@ pipeline {
     steps {
         sshagent(credentials: ['jenkins-cd-key']) {
             sh '''
-            ssh -o StrictHostKeyChecking=no ubuntu@3.233.239.156 << 'EOF'
+            ssh -o StrictHostKeyChecking=no ubuntu@98.92.171.29 << 'EOF'
             set -e
 
             echo "Preparing deployment directory..."
